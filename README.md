@@ -32,7 +32,7 @@ A hash-based PDF password generator for government memo files using trusted time
    - Requires a file (previous memo)
    - Uses its hash + current date to derive password
 
-4. **Verify Password**
+4. **Verify File**
    - Uses previous file + date to generate password
    - Tries opening selected file with derived password
 
