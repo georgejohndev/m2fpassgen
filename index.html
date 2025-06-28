@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Memo Password Generator</title>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>[x-cloak] { display: none !important; }</style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div x-data="passwordTool()" x-init="init()" class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-xl space-y-6 relative">
@@ -15,7 +16,7 @@
 
     <div class="space-y-2">
       <label class="block font-medium">Mode</label>
-      <select x-model="mode" class="border p-2 w-full rounded">
+      <select x-model="mode" @change="resetOutput" class="border p-2 w-full rounded">
         <option value="first">First File</option>
         <option value="verifyFirst">Verify First File</option>
         <option value="next">Next File</option>
@@ -24,54 +25,77 @@
       </select>
     </div>
 
-    <div class="space-y-2" x-show="mode === 'first'">
-      <label class="block font-medium">Date (auto-fetched)</label>
-      <input type="text" x-model="date" readonly class="border p-2 w-full rounded bg-gray-100">
-    </div>
+    <template x-if="mode === 'first'">
+      <div class="space-y-2">
+        <label class="block font-medium">Date (auto-fetched)</label>
+        <input type="text" x-model="date" readonly class="border p-2 w-full rounded bg-gray-100">
+      </div>
+    </template>
 
-    <div class="space-y-2" x-show="mode === 'verifyFirst'">
-      <label class="block font-medium">Date Used for First File</label>
-      <input type="date" x-model="date" class="border p-2 w-full rounded">
-      <label class="block font-medium">First File to Verify</label>
-      <input type="file" @change="handleFile($event, 'file')" class="border p-2 w-full rounded">
-    </div>
+    <template x-if="mode === 'verifyFirst'">
+      <div class="space-y-2">
+        <label class="block font-medium">Date Used for First File</label>
+        <input type="date" x-model="date" class="border p-2 w-full rounded">
+        <label class="block font-medium">First File to Verify</label>
+        <input type="file" @change="handleFile($event, 'file')" class="border p-2 w-full rounded">
+      </div>
+    </template>
 
-    <div class="space-y-2" x-show="mode === 'next'">
-      <label class="block font-medium">Previous File</label>
-      <input type="file" @change="handleFile($event, 'file')" class="border p-2 w-full rounded">
-      <label class="block font-medium">Date (auto-fetched)</label>
-      <input type="text" x-model="date" readonly class="border p-2 w-full rounded bg-gray-100">
-    </div>
+    <template x-if="mode === 'next'">
+      <div class="space-y-2">
+        <label class="block font-medium">Previous File</label>
+        <input type="file" @change="handleFile($event, 'file')" class="border p-2 w-full rounded">
+        <label class="block font-medium">Date (auto-fetched)</label>
+        <input type="text" x-model="date" readonly class="border p-2 w-full rounded bg-gray-100">
+      </div>
+    </template>
 
-    <div class="space-y-2" x-show="mode === 'verify'">
-      <label class="block font-medium">Previous File</label>
-      <input type="file" @change="handleFile($event, 'first')" class="border p-2 w-full rounded">
-      <label class="block font-medium">Date Used for Password</label>
-      <input type="date" x-model="date" class="border p-2 w-full rounded">
-      <label class="block font-medium">Current File to Verify</label>
-      <input type="file" @change="handleFile($event, 'file')" class="border p-2 w-full rounded">
-    </div>
+    <template x-if="mode === 'verify'">
+      <div class="space-y-2">
+        <label class="block font-medium">Previous File</label>
+        <input type="file" @change="handleFile($event, 'first')" class="border p-2 w-full rounded">
+        <label class="block font-medium">Date Used for Password</label>
+        <input type="date" x-model="date" class="border p-2 w-full rounded">
+        <label class="block font-medium">Current File to Verify</label>
+        <input type="file" @change="handleFile($event, 'file')" class="border p-2 w-full rounded">
+      </div>
+    </template>
 
-    <div class="space-y-2" x-show="mode === 'chain'">
-      <p class="text-sm text-gray-500">Chain mode is not yet implemented in this version.</p>
-    </div>
+    <template x-if="mode === 'chain'">
+      <div class="space-y-2">
+        <label class="block font-medium">Date for Chain (start date)</label>
+        <input type="date" x-model="date" class="border p-2 w-full rounded">
+        <label class="block font-medium">Upload Files in Chain Order</label>
+        <input type="file" multiple @change="handleChainFiles($event)" class="border p-2 w-full rounded">
+      </div>
+    </template>
 
     <button @click="generatePassword" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">Generate / Verify</button>
 
-    <div x-show="password" class="p-4 border rounded space-y-2 mt-4" :class="(mode.includes('verify') ? (matchStatus ? 'bg-green-100 border-green-300' : 'bg-red-100 border-red-300') : 'bg-green-100 border-green-300')">
-      <p class="font-semibold">Generated Password:</p>
-      <div class="relative">
-        <p @click="copyPassword" class="text-lg font-mono break-all cursor-pointer hover:bg-green-200 p-2 rounded" x-text="password"></p>
-        <div class="text-xs text-gray-600 italic mt-1">Click to copy</div>
-        <div x-show="copied" x-transition class="absolute top-full left-0 mt-1 text-sm text-green-700 bg-white border border-green-400 rounded px-2 py-1 shadow-md">Copied!</div>
-      </div>
-      <p x-show="mode.includes('verify')" class="font-bold" :class="matchStatus ? 'text-green-700' : 'text-red-700'">
-        <span x-text="matchStatus ? '✅ Match' : '❌ Mismatch or Failed to Open'"></span>
-      </p>
+    <div x-show="showSpinner" x-cloak class="flex justify-center">
+      <svg class="animate-spin h-6 w-6 text-blue-600 mt-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+      </svg>
     </div>
+
+    <template x-if="showResult">
+      <div class="p-4 border rounded space-y-2" :class="(mode.includes('verify') ? (matchStatus ? 'bg-green-100 border-green-300' : 'bg-red-100 border-red-300') : 'bg-green-100 border-green-300')">
+        <p class="font-semibold">Generated Password:</p>
+        <div class="relative">
+          <p @click="copyPassword" class="text-lg font-mono break-all cursor-pointer hover:bg-green-200 p-2 rounded" x-text="password"></p>
+          <div class="text-xs text-gray-600 italic mt-1">Click to copy</div>
+          <div x-show="copied" x-transition class="absolute top-full left-0 mt-1 text-sm text-green-700 bg-white border border-green-400 rounded px-2 py-1 shadow-md">Copied!</div>
+        </div>
+        <template x-if="mode.includes('verify') || mode === 'chain'">
+          <p class="font-bold" :class="matchStatus ? 'text-green-700' : 'text-red-700'">
+            <span x-text="matchStatus ? '✅ Match' : '❌ Mismatch or Failed to Open'"></span>
+          </p>
+        </template>
+      </div>
+    </template>
   </div>
 
-  <!-- Script section stays unchanged -->
   <script>
     async function fetchTimeFrom(url, parser) {
       try {
@@ -89,14 +113,24 @@
         date: '',
         fileHash: '',
         firstFileHash: '',
+        fileBlob: null,
         firstDate: '',
         mode: 'first',
+        chainFiles: [],
         copied: false,
-        fileBlob: null,
         matchStatus: null,
+        showResult: false,
+        showSpinner: false,
 
         async init() {
           this.date = await this.getTrustedDate();
+        },
+
+        resetOutput() {
+          this.password = '';
+          this.matchStatus = null;
+          this.copied = false;
+          this.showResult = false;
         },
 
         async getTrustedDate() {
@@ -128,38 +162,68 @@
           reader.readAsArrayBuffer(file);
         },
 
-        async generatePassword() {
-          let seed = '', fullHash = '';
-          this.matchStatus = null;
-          if (!this.date) return alert('Missing or invalid date');
+        async handleChainFiles(event) {
+          this.chainFiles = Array.from(event.target.files);
+        },
 
-          if (this.mode === 'first' || this.mode === 'verifyFirst') {
-            seed = CryptoJS.SHA256('FIRST' + this.date).toString();
-          } else if (this.mode === 'next' || this.mode === 'verify') {
-            if (!this.firstFileHash) return alert('Missing previous file');
-            seed = CryptoJS.SHA256(this.firstFileHash + this.date).toString();
+        async generatePassword() {
+          this.showSpinner = true;
+          this.showResult = false;
+          this.matchStatus = null;
+
+          let seed = '', fullHash = '';
+          if (!this.date) {
+            alert('Missing or invalid date');
+            this.showSpinner = false;
+            return;
           }
 
-          fullHash = CryptoJS.SHA256(seed).toString();
-          this.password = fullHash.slice(0, 32).toUpperCase();
-          this.copied = false;
-
-          if (this.mode.includes('verify')) {
-            if (!this.fileBlob) {
-              alert('No file selected to verify.');
+          try {
+            if (this.mode === 'first' || this.mode === 'verifyFirst') {
+              seed = CryptoJS.SHA256('FIRST' + this.date).toString();
+            } else if (this.mode === 'next') {
+              if (!this.fileHash) throw new Error('Missing previous file');
+              seed = CryptoJS.SHA256(this.fileHash + this.date).toString();
+            } else if (this.mode === 'verify') {
+              if (!this.firstFileHash) throw new Error('Missing previous file');
+              seed = CryptoJS.SHA256(this.firstFileHash + this.date).toString();
+            } else if (this.mode === 'chain') {
+              if (this.chainFiles.length < 2) throw new Error('Upload at least two files');
+              for (let i = 1; i < this.chainFiles.length; i++) {
+                const prevHash = CryptoJS.SHA256(CryptoJS.lib.WordArray.create(await this.chainFiles[i - 1].arrayBuffer())).toString();
+                const seed = CryptoJS.SHA256(prevHash + this.date).toString();
+                const pwd = CryptoJS.SHA256(seed).toString().slice(0, 32).toUpperCase();
+                const currBuffer = await this.chainFiles[i].arrayBuffer();
+                await pdfjsLib.getDocument({ data: currBuffer, password: pwd }).promise;
+              }
+              this.password = 'CHAIN OK';
+              this.matchStatus = true;
+              this.showResult = true;
+              this.showSpinner = false;
               return;
             }
 
-            try {
+            fullHash = CryptoJS.SHA256(seed).toString();
+            this.password = fullHash.slice(0, 32).toUpperCase();
+            this.copied = false;
+
+            if (this.mode.includes('verify')) {
+              if (!this.fileBlob) throw new Error('No file selected');
               const buffer = await this.fileBlob.arrayBuffer();
-              const loadingTask = pdfjsLib.getDocument({ data: buffer, password: this.password });
-              await loadingTask.promise;
+              await pdfjsLib.getDocument({ data: buffer, password: this.password }).promise;
               this.matchStatus = true;
-            } catch (e) {
-              this.matchStatus = false;
-              alert('Password did not match or PDF cannot be opened.');
+            }
+
+          } catch (e) {
+            console.warn(e);
+            this.matchStatus = false;
+            if (this.mode.includes('verify') || this.mode === 'chain') {
+              alert('Password mismatch or PDF failed to open.');
             }
           }
+
+          this.showSpinner = false;
+          this.showResult = true;
         },
 
         copyPassword() {
