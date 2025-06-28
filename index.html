@@ -9,11 +9,11 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-  <div x-data="passwordTool()" class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-xl">
+  <div x-data="passwordTool()" x-init="init()" class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-xl">
     <h1 class="text-2xl font-bold mb-4 text-center">🔐 Memo Password Generator</h1>
 
     <div class="mb-4">
-      <label class="block mb-1 font-medium">File (Previous Memo)</label>
+      <label class="block mb-1 font-medium">File</label>
       <input type="file" @change="handleFile($event)" class="border p-2 w-full rounded">
     </div>
 
@@ -22,11 +22,20 @@
       <input type="text" x-model="date" readonly class="border p-2 w-full rounded bg-gray-100">
     </div>
 
-    <button @click="generatePassword" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">Generate Password</button>
+    <div class="mb-4">
+      <label class="block mb-1 font-medium">Mode</label>
+      <select x-model="mode" class="border p-2 w-full rounded">
+        <option value="next">Next File</option>
+        <option value="first">First File</option>
+        <option value="verify">Verify Password</option>
+      </select>
+    </div>
+
+    <button @click="generatePassword" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">Generate / Verify</button>
 
     <template x-if="password">
       <div class="mt-4 p-4 bg-green-100 border border-green-300 rounded">
-        <p class="font-semibold">Generated Password:</p>
+        <p class="font-semibold" x-text="mode === 'verify' ? 'Expected Password:' : 'Generated Password:'"></p>
         <p class="text-lg font-mono break-all">{{ password }}</p>
       </div>
     </template>
@@ -48,22 +57,21 @@
         password: '',
         date: '',
         fileHash: '',
+        mode: 'next',
 
         async init() {
           this.date = await this.getTrustedDate();
         },
 
         async getTrustedDate() {
-          // PAGASA Time
           const pagasaTime = await fetchTimeFrom('https://bagong.pagasa.dost.gov.ph/', (html) => {
             const match = html.match(/\d{4}-\d{2}-\d{2}/);
             return match ? match[0] : null;
           });
           if (pagasaTime) return pagasaTime;
 
-          // time.gov fallback
           const timeGov = await fetchTimeFrom('https://time.gov/', (html) => {
-            const match = html.match(/\d{2}\/\d{2}\/\d{4}/); // MM/DD/YYYY
+            const match = html.match(/\d{2}\/\d{2}\/\d{4}/);
             if (match) {
               const [mm, dd, yyyy] = match[0].split('/');
               return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
@@ -72,7 +80,6 @@
           });
           if (timeGov) return timeGov;
 
-          // Final fallback: local browser time
           return new Date().toISOString().slice(0, 10);
         },
 
@@ -89,10 +96,14 @@
 
         generatePassword() {
           if (!this.fileHash || !this.date) {
-            alert("Please provide a file and ensure date is loaded.");
+            alert("Please provide a file and ensure the date is loaded.");
             return;
           }
-          const shortHash = this.fileHash.slice(0, 6).toUpperCase();
+          let hashSource = this.fileHash;
+          if (this.mode === 'next') {
+            hashSource = CryptoJS.SHA256(this.fileHash).toString(CryptoJS.enc.Hex);
+          }
+          const shortHash = hashSource.slice(0, 6).toUpperCase();
           const formattedDate = this.date.replace(/-/g, '');
           this.password = `M2F-${shortHash}-${formattedDate}`;
         }
