@@ -10,11 +10,12 @@ Generate secure, deterministic passwords for digital memos using the SHA-256 has
 - Built with Alpine.js and TailwindCSS
 - GitHub Pages ready
 
-## 🕒 Recommended Practice
+## 🕒 Time Servers
 
-To ensure audit integrity, base the date input on a **trusted time source**, such as:
-- [PAGASA Time](https://bagong.pagasa.dost.gov.ph/)
-- Any NTP-synced system clock (e.g., PC or phone)
+To ensure audit integrity, we base the date input on a **trusted time source**, such as:
+- [PAGASA Time](https://bagong.pagasa.dost.gov.ph/) - PRIMARY
+- [time.gov](https://time.gov) - FALLBACK WHEN PAG-ASA NTP SERVER IS DOWN
+- You may use any NTP-synced system clock (e.g., PC or phone) if you want to clone this repository.
 
 This ensures consistent, tamper-resistant timestamps when generating memo passwords.
 
@@ -24,6 +25,3 @@ This ensures consistent, tamper-resistant timestamps when generating memo passwo
 2. Choose the official date (`YYYY-MM-DD`)
 3. Click "Generate Password"
 4. Use the output for memo sealing or secure referencing
-
-## 🔐 Output Format
-
